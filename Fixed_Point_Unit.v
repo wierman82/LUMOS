@@ -19,7 +19,7 @@ module Fixed_Point_Unit
 );
 
     // State definitions
-    typedef enum reg [2:0] {
+    typedef  reg [2:0] {
         IDLE = 3'b000,
         MUL_P1 = 3'b001,
         MUL_P2 = 3'b010,
@@ -133,58 +133,90 @@ module Fixed_Point_Unit
     reg [WIDTH - 1 : 0] root;
     reg root_ready;
 
-reg [2:0] sqrt_state;
-reg [WIDTH - 1 : 0] radicand;
-reg [WIDTH - 1 : 0] res;
-reg [WIDTH - 1 : 0] iteration;
-reg [WIDTH - 1 : 0] temp;
-reg [WIDTH - 1 : 0] reminder;
-reg [WIDTH - 1 : 0] op1;
-reg [1 : 0] bits;
+localparam INIT = 2'b00, BEGIN = 2'b01, COMPUTE = 2'b10, FINISH = 2'b11;
 
-always @(posedge clk or posedge reset)
-begin
-    if (reset) begin
-        sqrt_state <= 0;
-        root <= 0;
+reg [1:0] sqrt_current_state, sqrt_next_state;
+
+reg sqrt_initiate;
+reg sqrt_active;
+
+reg [WIDTH-1:0] operand_reg, operand_next;
+reg [WIDTH-1:0] result_reg, result_next;
+reg [WIDTH+1:0] accum, accum_next;
+reg [WIDTH+1:0] trial_result;
+
+reg [4:0] step_count = 0;
+
+// State transition for the square root state machine
+always @(posedge clk) begin
+    if (operation == FPU_SQRT)
+        sqrt_current_state <= sqrt_next_state;
+    else
+        sqrt_current_state <= INIT;
         root_ready <= 0;
-        op1 <= operand_1;
-    end else if (operation == `FPU_SQRT) begin
-        case (sqrt_state)
-            0: begin 
-                radicand <= operand_1[WIDTH - 1: WIDTH - 2];
-                res <= 0;
-                temp <= 2'b01;
-                iteration <= (WIDTH + FBITS) / 2;
-                sqrt_state <= 1;
-            end
-            1: begin 
-                if(iteration > 0) begin
-                    reminder <= radicand - temp;
-                    if(reminder < 0) begin
-                        res <= (res << 1);
-                    end else begin
-                        res <= (res << 1) + 1;
-                    end
-                    op1 <= (op1 << 2);
-                    bits <= op1[WIDTH - 1 : WIDTH - 2];
-                    radicand <= (radicand << 2) + bits;
-                    temp <= (res << 2) + 1 ;    
-                    iteration <= iteration - 1;
-                end else begin 
-                    sqrt_state <= 2;
-                end
-            end
-            2: begin 
-                root <= res;
-                root_ready <= 1;
-                sqrt_state <= 0;
-            end
-        endcase
-    end    
 end
 
-endmodule
+// Next state logic for the square root state machine
+always @(*) begin
+    sqrt_next_state = sqrt_current_state;
+    case (sqrt_current_state)
+        INIT:
+            if (operation == FPU_SQRT) begin
+                sqrt_next_state = BEGIN;
+                sqrt_initiate <= 0;
+            end
+        BEGIN:
+            begin
+                sqrt_next_state = COMPUTE;
+                sqrt_initiate <= 1;
+            end
+        COMPUTE:
+            begin
+                if (step_count == ((WIDTH + FBITS) >> 1) - 1) begin
+                    sqrt_next_state = FINISH;
+                    sqrt_initiate <= 0;
+                end
+            end
+        FINISH:
+            sqrt_next_state = INIT;
+    endcase
+end
+
+// Combinational logic to perform one iteration of the square root calculation
+always @(*) begin
+    trial_result = accum - {result_reg, 2'b01};
+
+    if (trial_result[WIDTH + 1] == 0) begin
+        {accum_next, operand_next} = {trial_result[WIDTH-1:0], operand_reg, 2'b0};
+        result_next = {result_reg[WIDTH-2:0], 1'b1};
+    end else begin
+        {accum_next, operand_next} = {accum[WIDTH-1:0], operand_reg, 2'b0};
+        result_next = result_reg << 1;
+    end
+end
+
+// Sequential logic to update the square root state machine
+always @(posedge clk) begin
+    if (sqrt_initiate) begin
+        sqrt_active <= 1;
+        root_ready <= 0;
+        step_count <= 0;
+        result_reg <= 0;
+        {accum, operand_reg} <= {{WIDTH{1'b0}}, operand_1, 2'b0};
+    end else if (sqrt_active) begin
+        if (step_count == ((WIDTH + FBITS) >> 1) - 1) begin
+            sqrt_active <= 0;
+            root_ready <= 1;
+            root <= result_next;
+        end else begin
+            step_count <= step_count + 1;
+            operand_reg <= operand_next;
+            accum <= accum_next;
+            result_reg <= result_next;
+            root_ready <= 0;
+        end
+    end
+endmodule 
 
 module Multiplier
 (
