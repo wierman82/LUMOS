@@ -89,7 +89,4 @@ Fixed_Point_Unit #(
 Conclusion
 This project demonstrates a versatile Fixed Point Unit capable of performing several arithmetic operations with a focus on fixed-point arithmetic. The modular design allows for easy extension and customization to fit various bit-width and fractional bit requirements.
 
-![Photo1](1.jpg)
-![photo2](2.jpg)
-![photo3](3.jpg)
-![photo4](4.jpg)
+![Photo1](https://drive.google.com/file/d/1D9XK00cy7A1bcJbWSASwBbCwAKFmDlyW/view?usp=drive_link)
