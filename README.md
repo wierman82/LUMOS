@@ -3,9 +3,8 @@ Computer Organization - Spring 2024
 ## Iran Univeristy of Science and Technology
 ## Assignment 2: Light Utilization with Multicycle Operational Stages (LUMOS) RISC-V Processor Core
 
-- Name:Amirreza Rahbar
-- Team Members:Amirhosein Wierman yazdi
-- Student ID: 400412238
+- Name:Amirreza Rahbar/400412238
+- Team Members:Amirhosein Wierman yazdi/400413467
 - Date:13/04/03
 
 ## Report
@@ -90,3 +89,7 @@ Fixed_Point_Unit #(
 Conclusion
 This project demonstrates a versatile Fixed Point Unit capable of performing several arithmetic operations with a focus on fixed-point arithmetic. The modular design allows for easy extension and customization to fit various bit-width and fractional bit requirements.
 
+![Photo1](1.jpg)
+![photo2](2.jpg)
+![photo3](3.jpg)
+![photo4](4.jpg)
